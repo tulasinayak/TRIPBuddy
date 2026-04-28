@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRIPBuddy — AI Travel Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #0d0d0d; --paper: #f5f0e8; --cream: #ede7d9; --mist: #9e9484;
+  --accent: #c8440a; --surface: #ffffff; --border: rgba(13,13,13,0.13);
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --radius: 6px;
+}
+body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; }
+
+header {
+  height: 60px; background: var(--ink); display: flex;
+  align-items: center; justify-content: space-between; padding: 0 2rem;
+}
+.logo { font-family: var(--font-head); font-size: 1.4rem; color: var(--paper); }
+.logo span { color: var(--accent); font-style: italic; }
+.logo-tag { font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase; color: #777; }
+
+.layout { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 60px); }
+
+aside {
+  background: var(--cream); border-right: 1.5px solid rgba(13,13,13,0.18);
+  padding: 1.5rem; display: flex; flex-direction: column; gap: 1.4rem;
+  overflow-y: auto; max-height: calc(100vh - 60px);
+}
+.sec-label {
+  font-size: 0.62rem; font-weight: 500; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--mist); margin-bottom: 0.55rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+textarea {
+  font-family: var(--font-body); font-size: 0.88rem; font-weight: 300;
+  line-height: 1.6; background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 0.8rem 1rem; resize: vertical;
+  min-height: 88px; color: var(--ink); width: 100%; transition: border-color 0.2s;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+textarea::placeholder { color: #bbb; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.pill {
+  font-size: 0.68rem; padding: 4px 10px; border: 1px solid var(--border);
+  border-radius: 20px; cursor: pointer; background: transparent;
+  color: var(--ink); font-family: var(--font-body); transition: all 0.15s;
+}
+.pill:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+.agent-card {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; margin-bottom: 5px;
+  user-select: none; transition: border-color 0.18s, background 0.18s;
+}
+.agent-card:hover { border-color: rgba(200,68,10,0.4); }
+.agent-card.on { border-color: var(--accent); background: #fff8f5; }
+.ag-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
+.ag-info { flex: 1; min-width: 0; }
+.ag-name { font-size: 0.78rem; font-weight: 500; }
+.ag-desc { font-size: 0.65rem; color: var(--mist); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chk {
+  width: 15px; height: 15px; border: 1.5px solid var(--border);
+  border-radius: 3px; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+}
+.agent-card.on .chk { background: var(--accent); border-color: var(--accent); }
+.chk-tick { display: none; }
+.agent-card.on .chk-tick { display: block; }
+
+.sel-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.btn-sm {
+  font-family: var(--font-body); font-size: 0.68rem; font-weight: 500;
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--ink); cursor: pointer; transition: all 0.15s;
+}
+.btn-sm:hover { background: var(--ink); color: var(--paper); }
+
+select {
+  font-family: var(--font-body); font-size: 0.78rem; padding: 7px 10px;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink); width: 100%; cursor: pointer;
+}
+select:focus { outline: none; border-color: var(--accent); }
+
+.toggle-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.tog {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: #ccc; position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.tog.on { background: var(--accent); }
+.tog::after {
+  content: ''; position: absolute; width: 14px; height: 14px;
+  border-radius: 50%; background: white; top: 3px; left: 3px;
+  transition: transform 0.2s;
+}
+.tog.on::after { transform: translateX(16px); }
+.tog-label { font-size: 0.74rem; }
+
+#run-btn {
+  font-family: var(--font-body); font-size: 0.82rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 13px;
+  background: var(--ink); color: var(--paper); border: none;
+  border-radius: var(--radius); cursor: pointer; width: 100%;
+  transition: background 0.2s, transform 0.15s;
+}
+#run-btn:hover:not(:disabled) { background: var(--accent); }
+#run-btn:active { transform: scale(0.98); }
+#run-btn:disabled { background: var(--mist); cursor: not-allowed; }
+#agent-hint { font-size: 0.68rem; color: var(--mist); text-align: center; margin-top: 5px; min-height: 1em; }
+
+.right { display: flex; flex-direction: column; max-height: calc(100vh - 60px); }
+.toolbar {
+  border-bottom: 1px solid var(--border); padding: 0.8rem 1.75rem;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); flex-shrink: 0;
+}
+.toolbar h2 { font-family: var(--font-head); font-size: 1rem; font-weight: 700; flex: 1; }
+.badge {
+  font-size: 0.62rem; font-weight: 500; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+  background: var(--cream); color: var(--mist); border: 1px solid var(--border); transition: all 0.3s;
+}
+.badge.running { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.badge.done    { background: #d4edda; color: #155724; border-color: #28a745; }
+.badge.error   { background: #f8d7da; color: #721c24; border-color: #dc3545; }
+.btn-outline {
+  font-family: var(--font-body); font-size: 0.72rem; padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--ink); cursor: pointer; transition: background 0.15s;
+}
+.btn-outline:hover { background: var(--cream); }
+
+#prog-wrap { height: 2px; }
+#prog-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.4s; }
+
+.results { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
+.empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1rem; color: var(--mist); text-align: center; padding: 3rem;
+}
+
+.empty p { font-family: var(--font-head); font-style: italic; font-size: 1.05rem; max-width: 300px; line-height: 1.6; }
+.empty small { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.rcard {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  animation: fadeUp 0.3s ease forwards;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.rcard-head {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); background: var(--cream); cursor: pointer;
+}
+.rcard-title { flex: 1; font-size: 0.78rem; font-weight: 500; }
+.rcard-badge {
+  font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 20px;
+}
+.thinking { background: #fff3cd; color: #856404; }
+.s-done   { background: #d4edda; color: #155724; }
+.s-error  { background: #f8d7da; color: #721c24; }
+.rcard-body {
+  padding: 1.1rem 1.4rem; font-size: 0.82rem; line-height: 1.8;
+  white-space: pre-wrap; color: #222; max-height: 420px; overflow-y: auto;
+  transition: max-height 0.3s, padding 0.3s;
+}
+.rcard-body a {
+  color: var(--accent); text-decoration: none; font-weight: 500;
+  border-bottom: 1px solid rgba(200,68,10,0.3); transition: border-color 0.15s;
+}
+.rcard-body a:hover { border-color: var(--accent); }
+.rcard-body.html-mode { white-space: normal; }
+.link-row {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; margin-bottom: 6px;
+}
+.link-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 500; padding: 4px 12px;
+  border: 1px solid var(--border); border-radius: 20px;
+  color: var(--ink); text-decoration: none; background: var(--cream);
+  transition: background 0.15s, border-color 0.15s;
+}
+.link-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.link-btn.airbnb { border-color: #FF5A5F; color: #FF5A5F; }
+.link-btn.airbnb:hover { background: #FF5A5F; color: white; }
+.link-btn.booking { border-color: #003580; color: #003580; }
+.link-btn.booking:hover { background: #003580; color: white; }
+.link-btn.gmaps { border-color: #4285F4; color: #4285F4; }
+.link-btn.gmaps:hover { background: #4285F4; color: white; }
+.link-btn.trip { border-color: #34E0A1; color: #00aa6c; }
+.link-btn.trip:hover { background: #34E0A1; color: #0d0d0d; }
+.rcard-body.collapsed { max-height: 0; padding: 0 1.4rem; overflow: hidden; }
+.tts-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-top: 1px solid var(--border);
+  background: var(--cream); flex-wrap: wrap;
+}
+.tts-btn {
+  font-family: var(--font-body); font-size: 0.72rem; font-weight: 500;
+  padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--ink); color: var(--paper); cursor: pointer;
+  transition: background 0.15s; letter-spacing: 0.04em;
+}
+.tts-btn:hover { background: var(--accent); }
+.tts-btn.stop  { background: var(--cream); color: var(--ink); }
+.tts-btn.stop:hover { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+.tts-speed {
+  font-family: var(--font-body); font-size: 0.72rem; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.tts-note { font-size: 0.65rem; color: var(--mist); }
+.cursor {
+  display: inline-block; width: 2px; height: 13px; background: var(--accent);
+  margin-left: 2px; vertical-align: middle; animation: blink 0.8s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+#save-bar {
+  display: none; border-top: 1px solid var(--border);
+  padding: 0.65rem 1.75rem; background: var(--cream);
+  align-items: center; gap: 12px; font-size: 0.75rem; color: var(--mist); flex-shrink: 0;
+}
+#save-bar.show { display: flex; }
+
+#toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--ink); color: var(--paper); font-size: 0.75rem;
+  padding: 8px 16px; border-radius: var(--radius); z-index: 999;
+  opacity: 0; transform: translateY(6px); transition: all 0.2s; pointer-events: none;
+}
+#toast.show { opacity: 1; transform: none; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--mist); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TRIP<span>Buddy</span></div>
+  <div class="logo-tag">Multi-Agent AI Travel Planner</div>
+</header>
+
+<div class="layout">
+  <aside>
+
+    <div>
+      <div class="sec-label">Your Trip</div>
+      <textarea id="query" placeholder='e.g. "2 days in Rome, budget 100 euros, love history and food"'></textarea>
+      <div class="pills">
+        <button class="pill" onclick="setQ('2 days in Rome, budget 100 euros, love history and food')">Rome 2d</button>
+        <button class="pill" onclick="setQ('4 days in Tokyo, 2 people, budget 150 euros, anime and ramen')">Tokyo 4d</button>
+        <button class="pill" onclick="setQ('3 days in Barcelona, budget 90 euros, beaches and architecture')">Barcelona 3d</button>
+        <button class="pill" onclick="setQ('5 days in Kyoto, budget 120 euros, temples and zen gardens')">Kyoto 5d</button>
+        <button class="pill" onclick="setQ('2 days in Paris, budget 130 euros, art and cuisine')">Paris 2d</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">Agents</div>
+      <div class="sel-row">
+        <button class="btn-sm" onclick="selAll()">Select all</button>
+        <button class="btn-sm" onclick="selNone()">Clear</button>
+        <button class="btn-sm" onclick="selEssentials()">Essentials</button>
+      </div>
+      <div id="agents-grid"></div>
+    </div>
+
+
+    <div>
+      <div class="sec-label">Options</div>
+      <div class="toggle-row" onclick="toggleSave()">
+        <div class="tog" id="save-tog"></div>
+        <span class="tog-label">Auto-save plan to <code style="font-family:var(--font-mono);font-size:0.72rem">output/</code> folder</span>
+      </div>
+    </div>
+
+    <div style="margin-top:auto;">
+      <button id="run-btn" onclick="run()">Generate Travel Plan ↗</button>
+      <div id="agent-hint"></div>
+    </div>
+
+  </aside>
+
+  <div class="right">
+    <div class="toolbar">
+      <h2 id="out-title">Your Plan</h2>
+      <div class="badge" id="badge">Waiting</div>
+      <button class="btn-outline" id="copy-btn" onclick="copyAll()" style="display:none">Copy all</button>
+      <button class="btn-outline" id="clear-btn" onclick="clearAll()" style="display:none">Clear</button>
+    </div>
+    <div id="prog-wrap"><div id="prog-bar"></div></div>
+    <div class="results" id="results">
+      <div class="empty" id="empty">
+        <div id="plane-widget"></div>
+        <p id="globe-msg">Choose your agents, describe your trip, and let the AI do the planning.</p>
+        <small id="globe-sub">Select agents on the left → click Generate</small>
+      </div>
+    </div>
+    <div id="save-bar">
+      <span id="save-msg">Plan complete.</span>
+      <button class="btn-outline" onclick="dlMd()">Download .md</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── DATA ──
+var AGENTS = [
+  { key:'stays',     icon:'&#127968;', label:'Stay Finder',        desc:'Hotels, hostels & apartments',   task:'find_stays',        core:true  },
+  { key:'itinerary', icon:'&#128506;', label:'Day-by-Day Plan',    desc:'Morning / afternoon / evening',  task:'plan_itinerary',    core:true  },
+  { key:'food',      icon:'&#127373;', label:'Food & Dining',      desc:'Restaurants, markets & tips',    task:'recommend_food',    core:false },
+  { key:'tips',      icon:'&#9889;',   label:'Travel Tips',        desc:'Culture, safety & money',        task:'travel_tips',       core:true  },
+  { key:'transport', icon:'&#128647;', label:'Transport',           desc:'Getting around & passes',        task:'transport_options', core:false },
+  { key:'weather',   icon:'&#9728;',   label:'Weather & Packing',  desc:'Forecast & what to bring',       task:'weather_info',      core:false },
+  { key:'narrator',  icon:'&#127911;', label:'Audio Guide Script', desc:'Cinematic narration script',     task:'narrator_script',   core:false },
+];
+
+var TASK_ORDER = ['weather_info','find_stays','transport_options','plan_itinerary','recommend_food','travel_tips','narrator_script'];
+
+var active   = { stays:true, itinerary:true, tips:true };
+var results  = {};
+var planData = {};
+var running  = false;
+var saveOn   = false;
+
+// ── BUILD GRID (called on load) ──
+function buildGrid() {
+  var grid = document.getElementById('agents-grid');
+  grid.innerHTML = '';
+  for (var i = 0; i < AGENTS.length; i++) {
+    var a = AGENTS[i];
+    var isOn = !!active[a.key];
+    var card = document.createElement('div');
+    card.className = 'agent-card' + (isOn ? ' on' : '');
+    card.id = 'ac-' + a.key;
+    card.setAttribute('data-key', a.key);
+    card.onclick = (function(key){ return function(){ toggleAgent(key); }; })(a.key);
+    card.innerHTML =
+      '<span class="ag-icon">' + a.icon + '</span>' +
+      '<div class="ag-info">' +
+        '<div class="ag-name">' + a.label + '</div>' +
+        '<div class="ag-desc">' + a.desc + '</div>' +
+      '</div>' +
+      '<div class="chk">' +
+        '<svg class="chk-tick" width="9" height="7" viewBox="0 0 9 7" fill="none">' +
+          '<path d="M1 3.5L3.5 6 8 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>' +
+      '</div>';
+    grid.appendChild(card);
+  }
+  updateHint();
+}
+
+function toggleAgent(key) {
+  if (running) return;
+  active[key] = !active[key];
+  var card = document.getElementById('ac-' + key);
+  if (card) card.classList.toggle('on', !!active[key]);
+  updateHint();
+}
+
+function selAll() {
+  for (var i = 0; i < AGENTS.length; i++) active[AGENTS[i].key] = true;
+  buildGrid();
+}
+function selNone() {
+  for (var i = 0; i < AGENTS.length; i++) active[AGENTS[i].key] = false;
+  buildGrid();
+}
+function selEssentials() {
+  for (var i = 0; i < AGENTS.length; i++) active[AGENTS[i].key] = AGENTS[i].core;
+  buildGrid();
+}
+
+function updateHint() {
+  var n = 0;
+  for (var i = 0; i < AGENTS.length; i++) if (active[AGENTS[i].key]) n++;
+  document.getElementById('agent-hint').textContent =
+    n === 0 ? 'Select at least one agent' : n + ' agent' + (n > 1 ? 's' : '') + ' selected';
+}
+
+function setQ(t) { document.getElementById('query').value = t; }
+
+function toggleSave() {
+  saveOn = !saveOn;
+  document.getElementById('save-tog').classList.toggle('on', saveOn);
+}
+
+// ── MAIN RUN ──
+async function run() {
+  var q = document.getElementById('query').value.trim();
+  var n = 0;
+  for (var i = 0; i < AGENTS.length; i++) if (active[AGENTS[i].key]) n++;
+
+  if (!q) { toast('Please enter a travel query'); return; }
+  if (!n) { toast('Select at least one agent');   return; }
+  if (running) return;
+
+  running = true;
+  results = {}; planData = {};
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = 'Running...';
+  document.getElementById('save-bar').classList.remove('show');
+  document.getElementById('copy-btn').style.display = 'none';
+  document.getElementById('clear-btn').style.display = 'none';
+  setBadge('running', 'Running');
+  setProgress(5);
+  startGlobe();
+  var gm=document.getElementById('globe-msg'); if(gm) gm.textContent='Planning your trip...';
+  var gs=document.getElementById('globe-sub'); if(gs) gs.textContent='Agents are working — sit tight!';
+
+  // Step 1: parse query
+  var plan;
+  try {
+    plan = await parsePlan(q);
+    planData = plan;
+    document.getElementById('out-title').textContent =
+      plan.destination + ' — ' + plan.days + ' day' + (plan.days > 1 ? 's' : '') + ' · €' + plan.budget + '/day';
+    landGlobe(plan.destination);
+  } catch(e) {
+    addErrCard('Brain Agent', 'Could not parse query: ' + e.message +
+      '\n\nMake sure your server is running:\n  uvicorn server:app --reload --port 8000');
+    setBadge('error', 'Error');
+    finish(); return;
+  }
+
+  // Ordered selected agents
+  var selected = [];
+  for (var t = 0; t < TASK_ORDER.length; t++) {
+    for (var a = 0; a < AGENTS.length; a++) {
+      if (AGENTS[a].task === TASK_ORDER[t] && active[AGENTS[a].key]) {
+        selected.push(AGENTS[a]);
+      }
+    }
+  }
+
+  var done = 0;
+  for (var s = 0; s < selected.length; s++) {
+    var agent = selected[s];
+    var cid = addCard(agent);
+    setProgress(10 + Math.round((done / selected.length) * 85));
+    try {
+      var text = await runAgent(agent, plan, results);
+      results[agent.task] = text;
+      finishCard(cid, text, 's-done', 'Done');
+    } catch(e) {
+      results[agent.task] = 'Error: ' + e.message;
+      finishCard(cid, 'Error: ' + e.message, 's-error', 'Error');
+    }
+    done++;
+  }
+
+  setProgress(100);
+  setTimeout(function(){ setProgress(0); }, 700);
+  setBadge('done', 'Complete');
+  document.getElementById('copy-btn').style.display = '';
+  document.getElementById('clear-btn').style.display = '';
+
+  // Save via backend if toggled
+  if (saveOn) {
+    try {
+      var sr = await fetch('http://localhost:8000/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planData, results: results })
+      });
+      var sd = await sr.json();
+      document.getElementById('save-bar').classList.add('show');
+      document.getElementById('save-msg').textContent = 'Saved to: ' + (sd.filename || 'output/');
+    } catch(e) {
+      document.getElementById('save-bar').classList.add('show');
+      document.getElementById('save-msg').textContent = 'Auto-save failed — use Download below.';
+    }
+  } else {
+    document.getElementById('save-bar').classList.add('show');
+    document.getElementById('save-msg').textContent =
+      selected.length + ' sections generated for ' + (planData.destination || 'your trip') + '.';
+  }
+
+  finish();
+}
+
+function finish() {
+  running = false;
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = 'Generate Travel Plan ↗';
+}
+
+// ── API ──
+var BRAIN_SYS = 'You are a travel query parser. Extract JSON with keys: destination (string), days (integer), budget (integer euros/day/person), persons (integer default 1), interests (string array), tasks (empty array). Return STRICT JSON only. No markdown, no backticks, no explanation.';
+
+async function parsePlan(q) {
+  // Try backend first
+  try {
+    var r = await fetch('http://localhost:8000/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q })
+    });
+    if (r.ok) return await r.json();
+  } catch(_) {}
+
+  // Fallback: Anthropic direct
+  var r2 = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 400,
+      system: BRAIN_SYS,
+      messages: [{ role: 'user', content: q }]
+    })
+  });
+  if (!r2.ok) throw new Error('API ' + r2.status + ' — is the server running on :8000?');
+  var d = await r2.json();
+  var txt = d.content[0].text.replace(/```(?:json)?/g,'').replace(/```/g,'').trim();
+  return JSON.parse(txt);
+}
+
+async function runAgent(agent, plan, prior) {
+  // Try backend run-single
+  try {
+    var r = await fetch('http://localhost:8000/run-single', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destination: plan.destination, days: plan.days,
+        budget: plan.budget, persons: plan.persons,
+        interests: plan.interests, task: agent.task,
+        prior_results: prior
+      })
+    });
+    if (r.ok) {
+      var d = await r.json();
+      return d.result;
+    }
+  } catch(_) {}
+
+  // Fallback: Anthropic direct
+  var sys = buildSys(agent, plan);
+  var user = 'Trip: ' + plan.destination + ', ' + plan.days + ' days, \u20ac' + plan.budget +
+    '/day/person, ' + plan.persons + ' person(s), interests: ' + (plan.interests.join(', ') || 'general') + '.';
+  if (agent.key === 'narrator') {
+    if (prior['plan_itinerary'])
+      user += '\n\nITINERARY TO BASE SCRIPT ON:\n' + prior['plan_itinerary'].slice(0, 1400);
+    if (prior['travel_tips'])
+      user += '\n\nLOCAL INSIGHTS:\n' + prior['travel_tips'].slice(0, 400);
+    if (prior['find_stays'])
+      user += '\n\nACCOMMODATION CONTEXT:\n' + prior['find_stays'].slice(0, 300);
+  }
+
+  var r2 = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+      system: sys, messages: [{ role: 'user', content: user }]
+    })
+  });
+  if (!r2.ok) throw new Error('API ' + r2.status);
+  var d2 = await r2.json();
+  return d2.content[0].text;
+}
+
+function buildSys(a, plan) {
+  var dest = plan.destination;
+  var destEnc = encodeURIComponent(dest);
+  var budget = Math.round(plan.budget * 0.5);
+  var m = {
+    stays:
+      'You are an accommodation expert. Recommend exactly 4 stays in ' + dest + ' around €' + budget + '/night. ' +
+      'For EACH option use this exact format:\n\n## [Name]\nType: [hostel/hotel/apartment/boutique]\nPrice: €[X]/night\nArea: [neighbourhood]\nWhy: [2-3 key pros]\nBook on Airbnb: https://www.airbnb.com/s/' + destEnc + '/homes\nBook on Booking.com: https://www.booking.com/searchresults.html?ss=' + destEnc + '\n\n' +
+      'If you know a specific Airbnb or Booking.com listing for that property, use the direct URL. Otherwise use the search URLs above as-is. Under 550 words.',
+
+    itinerary:
+      'Travel planner. ' + plan.days + '-day itinerary for ' + dest + ' with Morning/Afternoon/Evening blocks, real places, costs, one hidden gem/day. Interests: ' + (plan.interests.join(',') || 'general') + '. Under 900 words.',
+
+    food:
+      'You are a local food expert for ' + dest + '. Recommend places under Breakfast / Lunch / Dinner / Snacks. ' +
+      'For EACH place:\n- Name, cuisine, price range\n- One-line description\n- Google Maps: https://www.google.com/maps/search/?api=1&query=[PLACE NAME],' + destEnc + '\n- TripAdvisor search: https://www.tripadvisor.com/Search?q=[PLACE NAME]+' + dest + '\n' +
+      'Replace [PLACE NAME] with the actual place name (URL-encoded, spaces as +). Under 700 words.',
+
+    tips:
+      'Travel tips expert for ' + dest + '. Sections: Getting Around, Money, Language & Etiquette, Safety, Apps, Timing. Specific not generic. Under 700 words.',
+
+    transport:
+      'Transport expert for ' + dest + '. Airport transfer, local transit with prices, day trips. Budget €' + Math.round(plan.budget * 0.15) + '/day. Under 600 words.',
+
+    weather:
+      'Weather advisor for ' + dest + '. Temperature, rain, daylight, packing list (10-15 items), warnings. Under 500 words.',
+
+    narrator:
+      'You are a warm, deeply knowledgeable travel audio guide host — your voice style is exactly like a NotebookLM podcast: conversational, human, slightly intimate, never robotic. Think of a brilliant friend who happens to know everything about art history, architecture, and local life. ' +
+      'Write an immersive, richly detailed audio guide script for ' + dest + '. ' +
+      '\n\nFORMATTING RULES — follow exactly:\n' +
+      '- Start with: Title: [City]: [evocative subtitle]\n' +
+      '- Use [SOUND: description] for ambient sound cues (violin music, church bells, market noise, footsteps on cobblestones, etc.)\n' +
+      '- Use [PAUSE] for natural 2-3 second breathing moments\n' +
+      '- Use [LOOK: direction] for spatial cues\n' +
+      '- Use second-person present tense: "As you step...", "Notice how...", "Turn to your left..."\n' +
+      '- Write in flowing prose paragraphs — NO bullet points, NO headers\n' +
+      '- End with: [END]\n' +
+      '\nCONTENT RULES — this is what makes it great:\n' +
+      '- For EVERY major attraction: describe it room by room, painting by painting if a museum. Who made it, when, what story it tells, what hidden detail to look for, why it matters.\n' +
+      '- Include at least 4 surprising historical anecdotes or legends\n' +
+      '- Rich sensory details: the smell of the air, temperature of marble, sound of footsteps, quality of light\n' +
+      '- Emotional moments: let the listener feel awe, wonder, connection to the past\n' +
+      '- Local secrets: a hidden courtyard, a dish only locals eat, a story no guidebook tells\n' +
+      '- Natural transitions between locations, as if walking together\n' +
+      '- Target 1000-1400 words — detailed enough to fill a real 8-10 minute audio guide\n' +
+      '- Warm, personal sign-off that makes the listener feel the city in their heart\n' +
+      '\nINSPIRATION: Your tone is like the Florence example — "Welcome, traveler! You have arrived at the heart of Renaissance Italy..." — warm, direct, poetic but never pretentious.'
+  };
+  return m[a.key] || 'You are a helpful travel assistant.';
+}
+
+// ── CARD HELPERS ──
+function addCard(agent) {
+  var id = 'c-' + agent.key;
+  var wrap = document.createElement('div');
+  wrap.className = 'rcard'; wrap.id = id;
+  wrap.innerHTML =
+    '<div class="rcard-head" onclick="toggleCard(\'' + id + '\')">' +
+      '<span class="ag-icon">' + agent.icon + '</span>' +
+      '<span class="rcard-title">' + agent.label + '</span>' +
+      '<span class="rcard-badge thinking" id="rb-' + id + '">Thinking...</span>' +
+    '</div>' +
+    '<div class="rcard-body" id="rb-body-' + id + '"><span class="cursor"></span></div>';
+  var emEl = document.getElementById('empty');
+  if (emEl) {
+    emEl.style.transition = 'opacity 0.35s';
+    emEl.style.opacity = '0';
+    setTimeout(function(){ if (emEl && emEl.parentNode) emEl.parentNode.removeChild(emEl); }, 350);
+  }
+  document.getElementById('results').appendChild(wrap);
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return id;
+}
+
+function finishCard(id, text, cls, label) {
+  var body  = document.getElementById('rb-body-' + id);
+  var badge = document.getElementById('rb-' + id);
+  if (body) {
+    var agentKey = id.replace('c-', '');
+    if (agentKey === 'stays' || agentKey === 'food') {
+      body.classList.add('html-mode');
+      body.innerHTML = formatWithLinks(text, agentKey);
+    } else {
+      body.textContent = text;
+    }
+  }
+  if (badge) { badge.textContent = label; badge.className = 'rcard-badge ' + cls; }
+  // Add TTS bar for narrator card
+  if (id === 'c-narrator' && cls === 's-done') {
+    var card = document.getElementById(id);
+    if (card && !card.querySelector('.tts-bar')) {
+      var bar = document.createElement('div');
+      bar.className = 'tts-bar';
+      bar.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">' +
+          '<button class="tts-btn" id="tts-play-btn" onclick="ttsPlay()">&#9654; Play Audio Guide</button>' +
+          '<button class="tts-btn stop" id="tts-stop-btn" onclick="ttsStop()" style="display:none">&#9646;&#9646; Stop</button>' +
+          '<div id="tts-progress-wrap" style="flex:1;min-width:120px;height:3px;background:var(--border);border-radius:2px;display:none;">' +
+            '<div id="tts-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.3s;border-radius:2px;"></div>' +
+          '</div>' +
+          '<span id="tts-time" style="font-size:0.65rem;color:var(--mist);display:none;"></span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">' +
+          '<input type="password" id="eleven-key" placeholder="ElevenLabs API key (optional)" style="font-family:var(--font-body);font-size:0.7rem;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);width:210px;" />' +
+          '<select id="eleven-voice" style="font-family:var(--font-body);font-size:0.7rem;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--ink);">' +
+            '<option value="21m00Tcm4TlvDq8ikWAM">Rachel — warm female</option>' +
+            '<option value="AZnzlk1XvdvUeBnXmlld">Domi — natural female</option>' +
+            '<option value="ErXwobaYiN019PkySvjV">Antoni — warm male</option>' +
+            '<option value="VR6AewLTigWG4xSOukaG">Arnold — deep male</option>' +
+            '<option value="pNInz6obpgDQGcFmaJgB">Adam — podcast male</option>' +
+          '</select>' +
+          '<span class="tts-note">Add ElevenLabs key for human voice · <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent);text-decoration:none;">Get free key ↗</a></span>' +
+        '</div>';
+      card.appendChild(bar);
+    }
+  }
+}
+
+function formatWithLinks(text, agentKey) {
+  // Split into sections by ## headings
+  var lines = text.split('\n');
+  var html = '';
+  var i = 0;
+  while (i < lines.length) {
+    var line = lines[i].trim();
+    if (!line) { html += '<br>'; i++; continue; }
+
+    if (line.startsWith('## ')) {
+      html += '<div style="margin-top:1.2rem;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;border-bottom:1px solid var(--border);padding-bottom:4px;">' + escH(line.slice(3)) + '</div>';
+      i++;
+    } else if (line.startsWith('# ')) {
+      html += '<div style="margin-top:0.6rem;font-weight:500;font-size:0.85rem;color:var(--mist);letter-spacing:0.06em;text-transform:uppercase;">' + escH(line.slice(2)) + '</div>';
+      i++;
+    } else if (agentKey === 'stays' && (line.startsWith('Book on Airbnb:') || line.startsWith('Book on Booking.com:'))) {
+      // Collect consecutive booking lines
+      var bookRow = '<div class="link-row">';
+      while (i < lines.length) {
+        var bl = lines[i].trim();
+        if (bl.startsWith('Book on Airbnb:')) {
+          var url = bl.replace('Book on Airbnb:', '').trim();
+          bookRow += '<a class="link-btn airbnb" href="' + escH(url) + '" target="_blank" rel="noopener">&#127968; Airbnb</a>';
+          i++;
+        } else if (bl.startsWith('Book on Booking.com:')) {
+          var url2 = bl.replace('Book on Booking.com:', '').trim();
+          bookRow += '<a class="link-btn booking" href="' + escH(url2) + '" target="_blank" rel="noopener">&#128338; Booking.com</a>';
+          i++;
+        } else { break; }
+      }
+      bookRow += '</div>';
+      html += bookRow;
+    } else if (agentKey === 'food' && (line.startsWith('- Google Maps:') || line.startsWith('- TripAdvisor'))) {
+      var linkRow = '<div class="link-row">';
+      while (i < lines.length) {
+        var fl = lines[i].trim();
+        if (fl.startsWith('- Google Maps:')) {
+          var gurl = fl.replace('- Google Maps:', '').trim();
+          linkRow += '<a class="link-btn gmaps" href="' + escH(gurl) + '" target="_blank" rel="noopener">&#128205; Google Maps</a>';
+          i++;
+        } else if (fl.startsWith('- TripAdvisor') || fl.startsWith('- TripAdvisor search:')) {
+          var turl = fl.replace(/^- TripAdvisor( search)?:/, '').trim();
+          linkRow += '<a class="link-btn trip" href="' + escH(turl) + '" target="_blank" rel="noopener">&#11088; TripAdvisor</a>';
+          i++;
+        } else { break; }
+      }
+      linkRow += '</div>';
+      html += linkRow;
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      html += '<div style="padding-left:1rem;margin:2px 0;">• ' + escH(line.slice(2)) + '</div>';
+      i++;
+    } else {
+      html += '<p style="margin:3px 0;">' + escH(line) + '</p>';
+      i++;
+    }
+  }
+  return html;
+}
+
+// ── AUDIO ENGINE ──
+var _ttsUtter     = null;
+var _audioCtx     = null;
+var _ambientNodes = [];
+var _ttsChunks    = [];
+var _ttsIdx       = 0;
+var _ttsTotal     = 0;
+var _elevenAudio  = null;
+
+// Sound presets triggered by [SOUND: xxx]
+var SOUND_PRESETS = {
+  'violin':       { type:'sine',     freq:440,  gain:0.04, detune:5  },
+  'church bells': { type:'sine',     freq:880,  gain:0.06, detune:2  },
+  'bells':        { type:'sine',     freq:880,  gain:0.06, detune:2  },
+  'market':       { type:'sawtooth', freq:180,  gain:0.02, detune:20 },
+  'footsteps':    { type:'square',   freq:60,   gain:0.015,detune:0  },
+  'cobblestone':  { type:'square',   freq:60,   gain:0.015,detune:0  },
+  'water':        { type:'sine',     freq:220,  gain:0.03, detune:30 },
+  'fountain':     { type:'sine',     freq:220,  gain:0.03, detune:30 },
+  'crowd':        { type:'sawtooth', freq:120,  gain:0.02, detune:40 },
+  'birds':        { type:'sine',     freq:1200, gain:0.02, detune:80 },
+  'piano':        { type:'sine',     freq:523,  gain:0.04, detune:3  },
+  'music':        { type:'sine',     freq:440,  gain:0.04, detune:5  },
+  'wind':         { type:'sawtooth', freq:80,   gain:0.015,detune:50 },
+  'rain':         { type:'sawtooth', freq:100,  gain:0.02, detune:60 },
+};
+
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
+
+function playAmbient(soundDesc) {
+  try {
+    stopAmbient();
+    var ctx = getAudioCtx();
+    var key = Object.keys(SOUND_PRESETS).find(function(k) {
+      return soundDesc.toLowerCase().indexOf(k) !== -1;
+    }) || 'music';
+    var preset = SOUND_PRESETS[key];
+
+    // Create two oscillators slightly detuned for richness
+    [0, 1].forEach(function(i) {
+      var osc    = ctx.createOscillator();
+      var gain   = ctx.createGain();
+      var filter = ctx.createBiquadFilter();
+
+      osc.type      = preset.type;
+      osc.frequency.setValueAtTime(preset.freq * (i === 1 ? 1.005 : 1), ctx.currentTime);
+      osc.detune.setValueAtTime(preset.detune * (i === 1 ? -1 : 1), ctx.currentTime);
+
+      filter.type            = 'lowpass';
+      filter.frequency.value = 2000;
+
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(preset.gain, ctx.currentTime + 1.5);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      _ambientNodes.push({ osc: osc, gain: gain, ctx: ctx });
+    });
+  } catch(e) { console.log('Audio:', e); }
+}
+
+function stopAmbient() {
+  _ambientNodes.forEach(function(n) {
+    try {
+      n.gain.gain.linearRampToValueAtTime(0, n.ctx.currentTime + 0.8);
+      setTimeout(function() { try { n.osc.stop(); } catch(e){} }, 900);
+    } catch(e) {}
+  });
+  _ambientNodes = [];
+}
+
+function extractScript() {
+  var body = document.getElementById('rb-body-c-narrator');
+  if (!body) return { segments: [] };
+  var raw = body.innerText || body.textContent || '';
+
+  // Parse into segments: {type:'speech'|'sound'|'pause', content:str}
+  var segments = [];
+  // Split on [SOUND:...], [PAUSE], [LOOK:...], [END]
+  var parts = raw.split(/(\[(?:SOUND|PAUSE|LOOK|END)[^\]]*\])/gi);
+  parts.forEach(function(p) {
+    p = p.trim();
+    if (!p) return;
+    var soundMatch = p.match(/^\[SOUND:\s*(.+?)\]$/i);
+    var pauseMatch = p.match(/^\[PAUSE[^\]]*\]$/i);
+    var lookMatch  = p.match(/^\[LOOK:\s*(.+?)\]$/i);
+    var endMatch   = p.match(/^\[END\]$/i);
+    if (soundMatch) {
+      segments.push({ type:'sound', content: soundMatch[1] });
+    } else if (pauseMatch) {
+      segments.push({ type:'pause', content: '2500' });
+    } else if (lookMatch) {
+      segments.push({ type:'speech', content: 'Look ' + lookMatch[1] + '.' });
+    } else if (endMatch) {
+      segments.push({ type:'pause', content: '1000' });
+    } else if (p.length > 2) {
+      segments.push({ type:'speech', content: p });
+    }
+  });
+  return segments;
+}
+
+// ── YOUR ELEVENLABS API KEY ──
+var ELEVEN_API_KEY = 'YOUR_KEY_HERE';  // ← paste your key between the quotes
+
+async function ttsPlay() {
+  var elevenKey   = ELEVEN_API_KEY || (document.getElementById('eleven-key') || {}).value || '';
+  var elevenVoice = (document.getElementById('eleven-voice') || {}).value || '21m00Tcm4TlvDq8ikWAM';
+
+  document.getElementById('tts-play-btn').style.display = 'none';
+  document.getElementById('tts-stop-btn').style.display = '';
+  var pw = document.getElementById('tts-progress-wrap');
+  var pt = document.getElementById('tts-time');
+  if (pw) pw.style.display = '';
+  if (pt) pt.style.display = '';
+
+  var segments = extractScript();
+  if (!segments.length) { ttsReset(); return; }
+
+  // Count speech segments for progress
+  var speechSegs = segments.filter(function(s){ return s.type === 'speech'; });
+  var total = speechSegs.length;
+  var done  = 0;
+
+  if (elevenKey) {
+    // ── ElevenLabs path ──
+    // Concatenate all speech into one request for natural flow
+    var fullText = segments
+      .filter(function(s){ return s.type === 'speech'; })
+      .map(function(s){ return s.content; })
+      .join(' ');
+
+    try {
+      if (pt) pt.textContent = 'Generating with ElevenLabs...';
+      var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + elevenVoice + '/stream', {
+        method: 'POST',
+        headers: {
+          'xi-api-key': elevenKey,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg'
+        },
+        body: JSON.stringify({
+          text: fullText,
+          model_id: 'eleven_turbo_v2',
+          voice_settings: { stability: 0.45, similarity_boost: 0.82, style: 0.35, use_speaker_boost: true }
+        })
+      });
+      if (!resp.ok) throw new Error('ElevenLabs ' + resp.status);
+      var blob = await resp.blob();
+      var url  = URL.createObjectURL(blob);
+
+      // Play any opening SOUND first
+      var firstSound = segments.find(function(s){ return s.type === 'sound'; });
+      if (firstSound) playAmbient(firstSound.content);
+
+      _elevenAudio = new Audio(url);
+      _elevenAudio.play();
+      if (pt) pt.textContent = 'Playing...';
+
+      // Animate progress bar based on audio duration
+      _elevenAudio.addEventListener('timeupdate', function() {
+        var pct = _elevenAudio.duration ? (_elevenAudio.currentTime / _elevenAudio.duration * 100) : 0;
+        var bar = document.getElementById('tts-progress-bar');
+        if (bar) bar.style.width = pct + '%';
+        var elapsed = Math.floor(_elevenAudio.currentTime);
+        var total2  = Math.floor(_elevenAudio.duration || 0);
+        if (pt) pt.textContent = fmtTime(elapsed) + ' / ' + fmtTime(total2);
+      });
+      _elevenAudio.addEventListener('ended', function() {
+        stopAmbient(); ttsReset(); URL.revokeObjectURL(url);
+      });
+      _elevenAudio.addEventListener('error', function() {
+        stopAmbient(); ttsReset();
+      });
+    } catch(e) {
+      if (pt) pt.textContent = 'ElevenLabs error: ' + e.message + ' — falling back to browser voice';
+      setTimeout(function(){ ttsPlayBrowser(segments, total, pt); }, 1500);
+    }
+  } else {
+    // ── Browser TTS fallback ──
+    ttsPlayBrowser(segments, total, pt);
+  }
+}
+
+function ttsPlayBrowser(segments, total, pt) {
+  if (!window.speechSynthesis) { ttsReset(); return; }
+  ttsStop();
+  _ttsIdx = 0;
+
+  // Pick best available voice
+  var voices = window.speechSynthesis.getVoices();
+  var best = voices.find(function(v){
+    return v.lang.startsWith('en') && (
+      v.name.includes('Samantha') || v.name.includes('Karen') ||
+      v.name.includes('Daniel')   || v.name.includes('Google UK') ||
+      v.name.includes('Natural')  || v.name.includes('Neural')
+    );
+  }) || voices.find(function(v){ return v.lang.startsWith('en-GB'); })
+     || voices.find(function(v){ return v.lang.startsWith('en'); });
+
+  var done = 0;
+  function nextSeg() {
+    if (_ttsIdx >= segments.length) { ttsReset(); return; }
+    var seg = segments[_ttsIdx++];
+    if (seg.type === 'sound') {
+      playAmbient(seg.content);
+      nextSeg();
+    } else if (seg.type === 'pause') {
+      setTimeout(nextSeg, parseInt(seg.content) || 2000);
+    } else {
+      var utt = new SpeechSynthesisUtterance(seg.content);
+      utt.rate  = 0.88;   // slightly slower = more human
+      utt.pitch = 0.95;
+      utt.volume = 1.0;
+      if (best) utt.voice = best;
+      utt.onend   = function() { done++; updateProgress(done, total, pt); nextSeg(); };
+      utt.onerror = function() { nextSeg(); };
+      window.speechSynthesis.speak(utt);
+    }
+  }
+  nextSeg();
+}
+
+function updateProgress(done, total, pt) {
+  var pct = total ? (done / total * 100) : 0;
+  var bar = document.getElementById('tts-progress-bar');
+  if (bar) bar.style.width = pct + '%';
+  if (pt) pt.textContent = done + ' / ' + total + ' sections';
+}
+
+function fmtTime(s) {
+  var m = Math.floor(s/60);
+  var sec = s % 60;
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+function ttsStop() {
+  if (_elevenAudio) { _elevenAudio.pause(); _elevenAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  stopAmbient();
+  ttsReset();
+}
+
+function ttsReset() {
+  var pb = document.getElementById('tts-play-btn');
+  var sb = document.getElementById('tts-stop-btn');
+  var pw = document.getElementById('tts-progress-wrap');
+  var pt = document.getElementById('tts-time');
+  if (pb) pb.style.display = '';
+  if (sb) sb.style.display = 'none';
+  if (pw) pw.style.display = 'none';
+  var bar = document.getElementById('tts-progress-bar');
+  if (bar) bar.style.width = '0%';
+  if (pt) { pt.textContent = ''; pt.style.display = 'none'; }
+  _ttsIdx = 0; _elevenAudio = null;
+}
+
+function escH(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addErrCard(title, msg) {
+  var wrap = document.createElement('div');
+  wrap.className = 'rcard';
+  wrap.innerHTML =
+    '<div class="rcard-head"><span class="rcard-title">' + title + '</span>' +
+    '<span class="rcard-badge s-error">Error</span></div>' +
+    '<div class="rcard-body" style="color:#721c24;">' + msg + '</div>';
+  document.getElementById('results').appendChild(wrap);
+}
+
+function toggleCard(id) {
+  var b = document.getElementById('rb-body-' + id);
+  if (b) b.classList.toggle('collapsed');
+}
+
+// ── UI ──
+function setBadge(cls, label) {
+  var b = document.getElementById('badge');
+  b.className = 'badge ' + cls; b.textContent = label;
+}
+function setProgress(pct) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+}
+function clearAll() {
+  results = {}; planData = {};
+  var r = document.getElementById('results');
+  r.innerHTML = '';
+  planeStop(); initGlobe();
+  setBadge('', 'Waiting');
+  document.getElementById('out-title').textContent = 'Your Plan';
+  document.getElementById('copy-btn').style.display = 'none';
+  document.getElementById('clear-btn').style.display = 'none';
+  document.getElementById('save-bar').classList.remove('show');
+}
+function copyAll() {
+  var txt = '';
+  for (var i = 0; i < AGENTS.length; i++) {
+    var a = AGENTS[i];
+    if (results[a.task]) txt += '## ' + a.label + '\n\n' + results[a.task] + '\n\n---\n\n';
+  }
+  navigator.clipboard.writeText(txt).then(function(){ toast('Copied to clipboard'); });
+}
+function dlMd() {
+  var dest = (planData.destination || 'trip').toLowerCase().replace(/\s+/g, '_');
+  var md = '# Travel Plan: ' + (planData.destination || 'Trip') + '\n\n';
+  md += '**Duration:** ' + (planData.days || 1) + ' days\n';
+  md += '**Budget:** \u20ac' + (planData.budget || 0) + '/day/person\n';
+  md += '**Travelers:** ' + (planData.persons || 1) + '\n';
+  md += '**Interests:** ' + ((planData.interests || []).join(', ') || 'general') + '\n\n---\n\n';
+  for (var i = 0; i < AGENTS.length; i++) {
+    var a = AGENTS[i];
+    if (results[a.task]) md += '## ' + a.label + '\n\n' + results[a.task] + '\n\n---\n\n';
+  }
+  var blob = new Blob([md], { type: 'text/markdown' });
+  var url  = URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  link.href = url; link.download = dest + '_plan.md'; link.click();
+  URL.revokeObjectURL(url);
+}
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ── INIT ──
+buildGrid();
+
+
+// ── PLANE ANIMATION ──
+var _pRAF = null;
+var _pDeg = 0;
+var _pSpeed = 1.2;  // degrees per frame — idle
+var _pRunning = false;
+
+function _buildSVG() {
+  var el = document.getElementById('plane-widget');
+  if (!el) return;
+  el.innerHTML =
+    '<svg id="pw-svg" viewBox="0 0 200 200" width="200" height="200" style="display:block;margin:0 auto;overflow:visible">' +
+      '<circle cx="100" cy="100" r="72" fill="none" stroke="rgba(13,13,13,0.12)" stroke-width="1.2" stroke-dasharray="5 4"/>' +
+      '<circle cx="100" cy="100" r="4" fill="rgba(13,13,13,0.18)"/>' +
+      '<g id="pw-plane">' +
+        '<ellipse cx="0" cy="0" rx="12" ry="3.8" fill="#0d0d0d"/>' +
+        '<polygon points="4,-2 -5,-14 -9,-14 -4,-2" fill="#1a1a1a"/>' +
+        '<polygon points="4,2 -5,14 -9,14 -4,2" fill="#1a1a1a"/>' +
+        '<polygon points="-8,-1 -12,-6 -12,0" fill="#c8440a"/>' +
+        '<polygon points="-8,1 -12,6 -12,0" fill="#c8440a"/>' +
+      '</g>' +
+    '</svg>';
+  _movePlane(_pDeg);
+}
+
+function _movePlane(deg) {
+  var g = document.getElementById('pw-plane');
+  if (!g) return;
+  var rad = deg * Math.PI / 180;
+  var px = 100 + 72 * Math.cos(rad);
+  var py = 100 + 72 * Math.sin(rad);
+  g.setAttribute('transform', 'translate(' + px + ',' + py + ') rotate(' + (deg + 90) + ')');
+}
+
+function _pLoop() {
+  _pDeg = (_pDeg + _pSpeed) % 360;
+  _movePlane(_pDeg);
+  _pRAF = requestAnimationFrame(_pLoop);
+}
+
+function _pStart() {
+  if (_pRAF) cancelAnimationFrame(_pRAF);
+  _pRunning = true;
+  _pLoop();
+}
+
+function _pStop() {
+  _pRunning = false;
+  if (_pRAF) { cancelAnimationFrame(_pRAF); _pRAF = null; }
+}
+
+// Public API used by the run flow
+function startGlobe() {
+  _pStop();
+  var results = document.getElementById('results');
+  if (results) {
+    results.innerHTML =
+      '<div class="empty" id="empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--mist);text-align:center;padding:3rem;">' +
+        '<div id="plane-widget"></div>' +
+        '<p id="globe-msg" style="font-family:var(--font-head);font-style:italic;font-size:1.05rem;max-width:300px;line-height:1.6;">Planning your trip...</p>' +
+        '<small id="globe-sub" style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;">Agents are working — sit tight!</small>' +
+      '</div>';
+  }
+  _pSpeed = 1.8;
+  _buildSVG();
+  _pStart();
+}
+
+function landGlobe(destName) {
+  _pStop();
+}
+
+function planeStop() { _pStop(); }
+function initGlobe() {
+  var results = document.getElementById('results');
+  if (results) {
+    results.innerHTML =
+      '<div class="empty" id="empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--mist);text-align:center;padding:3rem;">' +
+        '<div id="plane-widget"></div>' +
+        '<p id="globe-msg" style="font-family:var(--font-head);font-style:italic;font-size:1.05rem;max-width:300px;line-height:1.6;">Choose your agents, describe your trip, and let the AI do the planning.</p>' +
+        '<small id="globe-sub" style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;">Select agents on the left → click Generate</small>' +
+      '</div>';
+  }
+  _pSpeed = 1.2; _buildSVG(); _pStart();
+}
+function buildWidget() { _buildSVG(); }
+
+window.addEventListener('load', function() {
+  setTimeout(function() { initGlobe(); }, 100);
+});
+</script>
+</body>
+</html>
